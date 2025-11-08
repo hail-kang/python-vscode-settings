@@ -1,0 +1,29 @@
+{
+  "recommendations": [
+    // Python Language Support
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+
+    // Ruff Linter & Formatter
+    "charliermarsh.ruff",
+
+    // Testing
+    "littlefoxteam.vscode-python-test-adapter",
+
+    // TOML Support
+    "tamasfe.even-better-toml",
+
+    // Additional Utilities
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    "gruntfuggly.todo-tree"
+  ],
+  "unwantedRecommendations": [
+    // Avoid conflicts with Ruff
+    "ms-python.autopep8",
+    "ms-python.flake8",
+    "ms-python.pylint",
+    "ms-python.black-formatter",
+    "ms-python.isort"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "include": [
+    "apps",
+    "packages"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/node_modules",
+    "**/.venv",
+    "**/dist",
+    "**/build"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.10",
+  "pythonPlatform": "All",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": "warning",
+  "reportUnusedVariable": "warning",
+  "reportDuplicateImport": "warning",
+  "reportOptionalMemberAccess": "warning",
+  "reportOptionalCall": "warning",
+  "reportOptionalIterable": "warning",
+  "reportOptionalContextManager": "warning",
+  "reportOptionalOperand": "warning",
+  "reportTypedDictNotRequiredAccess": "warning",
+  "reportConstantRedefinition": "error",
+  "reportIncompatibleMethodOverride": "error",
+  "reportIncompatibleVariableOverride": "error",
+  "reportInconsistentConstructor": "error",
+  "reportUnknownParameterType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownMemberType": "none",
+  "reportPrivateUsage": "warning",
+  "reportUnnecessaryIsInstance": "warning",
+  "reportUnnecessaryCast": "warning",
+  "reportUnnecessaryComparison": "warning",
+  "reportUnnecessaryContains": "warning",
+  "reportImplicitStringConcatenation": "none",
+  "reportInvalidStubStatement": "error",
+  "reportIncompleteStub": "warning",
+  "reportUnsupportedDunderAll": "warning",
+  "reportUnusedCallResult": "none",
+  "reportUnusedCoroutine": "error",
+  "stubPath": "typings",
+  "executionEnvironments": [
+    {
+      "root": "apps/api",
+      "pythonVersion": "3.10",
+      "pythonPlatform": "All",
+      "extraPaths": [
+        "apps/api/src"
+      ]
+    }
+  ]
+}

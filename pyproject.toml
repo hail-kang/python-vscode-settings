@@ -1,0 +1,96 @@
+[tool.uv.workspace]
+members = ["apps/*", "packages/*"]
+
+[tool.uv]
+# UV workspace configuration
+dev-dependencies = [
+    "ruff>=0.1.8",
+    "pyright>=1.1.338",
+]
+
+[tool.ruff]
+# Root-level ruff configuration for entire monorepo
+target-version = "py310"
+line-length = 100
+indent-width = 4
+
+# Source code directories
+src = ["apps/*/src", "packages/*/src"]
+
+# Exclude patterns
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.pyc",
+    ".pytest_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+# Enable rule sets
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "ANN",   # flake8-annotations
+    "ASYNC", # flake8-async
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "T10",   # flake8-debugger
+    "EM",    # flake8-errmsg
+    "ISC",   # flake8-implicit-str-concat
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SIM",   # flake8-simplify
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "PL",    # pylint
+    "TRY",   # tryceratops
+    "PERF",  # perflint
+    "RUF",   # ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "ANN101",  # Missing type annotation for self
+    "ANN102",  # Missing type annotation for cls
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore specific rules in test files
+"**/tests/**/*.py" = [
+    "ANN",     # Type annotations not required in tests
+    "PLR2004", # Magic value comparisons are OK in tests
+    "S101",    # assert statements are OK in tests
+]
+
+[tool.ruff.format]
+# Formatting preferences
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+# Import sorting configuration
+force-sort-within-sections = true
+split-on-trailing-comma = true
