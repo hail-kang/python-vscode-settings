@@ -209,5 +209,5 @@ __marimo__/
 # Claude
 .claude/
 
-# Vscode Settings
-.vscode/settings.json
+# VSCode
+.vscode/
