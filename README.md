@@ -31,12 +31,10 @@ This project is designed to validate and establish optimal VSCode settings for P
 
 ```
 python-vscode-settings/
-├── .vscode/                                 # VSCode configuration (git ignored)
-│   ├── settings.json                        # Editor settings
-│   └── extensions.json                      # Recommended extensions
 ├── .vscode.example/                         # Example VSCode configuration
 │   ├── settings.json                        # Example settings
-│   └── extensions.json                      # Example extensions
+│   ├── extensions.json                      # Example extensions
+│   └── tasks.json                           # Development tasks
 ├── apps/                                    # Applications
 │   └── api/                                 # FastAPI application
 │       ├── src/                             # API source code
@@ -111,6 +109,19 @@ The `.vscode/settings.json` (copied from `.vscode.example/`) includes:
 - ✅ Import organization
 - ✅ Path resolution for monorepo structure
 - ✅ Pytest integration for all apps
+
+### VSCode Tasks
+The `.vscode/tasks.json` provides common development commands:
+- `uv: sync` - Install/update dependencies
+- `ruff: format` - Format all code
+- `ruff: check` - Lint code
+- `ruff: check --fix` - Auto-fix linting issues
+- `pytest: run all` - Run all tests
+- `pytest: run with coverage` - Run tests with coverage report
+- `pyright: check` - Type check entire project
+- `uvicorn: run dev server` - Start FastAPI development server
+
+Access via: `Cmd+Shift+P` → "Tasks: Run Task"
 
 ### Ruff Configuration
 Root-level configuration for entire monorepo:
