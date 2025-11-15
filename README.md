@@ -24,34 +24,54 @@ This project is designed to validate and establish optimal VSCode settings for P
 
 ### Frameworks & Libraries
 - **FastAPI**: Modern web framework for building APIs
-- **SQLAlchemy**: SQL toolkit and ORM
-- **Prisma** (planned): Next-generation ORM
+- **SQLAlchemy**: SQL toolkit and ORM (async with aiosqlite)
+- **Prisma**: Next-generation ORM with type-safe database client
+- **Pydantic**: Data validation using Python type annotations
 
 ## 📁 Project Structure (Monorepo)
 
 ```
 python-vscode-settings/
 ├── .vscode.example/                         # Example VSCode configuration
-│   ├── settings.json                        # Example settings
-│   ├── extensions.json                      # Example extensions
+│   ├── settings.json                        # Workspace settings
+│   ├── extensions.json                      # Recommended extensions
 │   ├── tasks.json                           # Development tasks
 │   └── launch.json                          # Debug configurations
 ├── apps/                                    # Applications
 │   └── api/                                 # FastAPI application
 │       ├── src/                             # API source code
-│       ├── tests/                           # API tests
+│       │   ├── config.py                    # App configuration
+│       │   ├── database.py                  # SQLAlchemy async setup
+│       │   ├── main.py                      # FastAPI app entry point
+│       │   ├── routers/                     # API route handlers
+│       │   │   ├── users.py                 # SQLAlchemy-based endpoints
+│       │   │   └── users_prisma.py          # Prisma-based endpoints
+│       │   └── schemas/                     # Pydantic schemas
+│       ├── tests/                           # Comprehensive test suite
+│       │   ├── conftest.py                  # Pytest fixtures
+│       │   ├── test_users.py                # SQLAlchemy tests (11 tests)
+│       │   └── test_users_prisma.py         # Prisma tests (7 tests)
 │       ├── pyproject.toml                   # App dependencies
 │       └── .python-version                  # Python 3.10.14
 ├── packages/                                # Shared packages
-│   └── db/                                  # Database models package
+│   ├── sqlalchemy/                          # SQLAlchemy models package
+│   │   ├── src/
+│   │   │   └── my_sqlalchemy/               # Explicit namespace
+│   │   │       ├── __init__.py              # Package exports
+│   │   │       └── models/                  # Database models
+│   │   │           ├── __init__.py
+│   │   │           ├── base.py              # Declarative base
+│   │   │           └── user.py              # User model (async)
+│   │   └── pyproject.toml                   # SQLAlchemy 2.0+ dependency
+│   └── prisma/                              # Prisma ORM package
+│       ├── schema.prisma                    # Prisma schema definition
+│       ├── migrations/                      # Database migrations
 │       ├── src/
-│       │   └── models/                      # SQLAlchemy models
-│       │       ├── __init__.py
-│       │       ├── base.py                  # Base declarative class
-│       │       └── user.py                  # User model
-│       └── pyproject.toml                   # SQLAlchemy dependency
-├── pyproject.toml                           # Workspace & ruff configuration
-├── pyrightconfig.json                       # Pyright type checking config
+│       │   ├── __init__.py                  # Prisma client wrapper
+│       │   └── client.py
+│       └── pyproject.toml                   # Prisma dependency
+├── pyproject.toml                           # Workspace & tool config
+├── pyrightconfig.json                       # Pyright configuration
 ├── .python-version                          # Python 3.10.14
 ├── uv.lock                                  # Dependency lock file
 └── README.md                                # This file
@@ -156,34 +176,106 @@ Workspace-aware type checking:
    - Monorepo structure with uv workspace
    - Ruff and Pyright configuration
    - VSCode settings and extensions
+   - Development tasks and debug configurations
 
 2. **Phase 2**: Shared packages and models ✅
-   - `packages/db` with SQLAlchemy models
-   - User model with type-safe mappings
+   - `packages/sqlalchemy` with async SQLAlchemy 2.0 models
+   - User model with type-safe mapped columns
+   - Explicit `my_sqlalchemy` namespace
 
-3. **Phase 3**: FastAPI application (In Progress)
-   - API endpoints and routing
-   - Database integration
-   - Testing setup
+3. **Phase 3**: FastAPI application ✅
+   - Complete CRUD API endpoints
+   - Async database integration with SQLAlchemy
+   - Pydantic schemas for validation
+   - Comprehensive test suite (11 tests)
+   - All tests passing with pytest-asyncio
 
-4. **Phase 4**: Prisma integration and comparison (Planned)
-5. **Phase 5**: Documentation of optimal settings (Planned)
+4. **Phase 4**: Prisma integration ✅
+   - Prisma schema matching SQLAlchemy models
+   - Complete Prisma-based API endpoints (`/api/v1/prisma/users`)
+   - Database migrations with Prisma Migrate
+   - Comprehensive Prisma test suite (7 tests)
+   - Side-by-side comparison capability
+
+5. **Phase 5**: Documentation and comparison (In Progress)
+   - SQLAlchemy vs Prisma comparison
+   - Performance benchmarks
+   - Developer experience analysis
 
 ## 🧪 Testing Strategy
 
-- Unit tests for utility functions
-- Integration tests for API endpoints
-- Type checking validation
-- Linting rule effectiveness
+### Current Test Coverage
+- **Total Tests**: 18 (all passing)
+  - SQLAlchemy endpoints: 11 tests
+  - Prisma endpoints: 7 tests
+- **Test Framework**: pytest with pytest-asyncio
+- **Coverage Tools**: pytest-cov with HTML reports
+- **Database**: In-memory SQLite for SQLAlchemy, file-based for Prisma
+
+### Test Categories
+- **CRUD Operations**: Create, Read, Update, Delete for both ORMs
+- **Validation**: Duplicate email/username handling
+- **Error Cases**: 404 not found, 400 bad request
+- **Pagination**: List operations with skip/limit
+- **Async Patterns**: Full async/await testing with proper fixtures
+
+### Running Tests
+```bash
+# Run all tests
+uv run pytest apps/api/tests/ -v
+
+# Run with coverage
+uv run pytest apps/api/tests/ --cov=src --cov-report=html
+
+# Run specific test file
+uv run pytest apps/api/tests/test_users.py -v
+uv run pytest apps/api/tests/test_users_prisma.py -v
+```
+
+## 🎯 API Endpoints
+
+### SQLAlchemy Endpoints
+Base path: `/api/v1/users`
+
+- `POST /` - Create new user
+- `GET /{user_id}` - Get user by ID
+- `GET /` - List users (with pagination)
+- `PATCH /{user_id}` - Update user
+- `DELETE /{user_id}` - Delete user
+
+### Prisma Endpoints
+Base path: `/api/v1/prisma/users`
+
+- `POST /` - Create new user
+- `GET /{user_id}` - Get user by ID
+- `GET /` - List users (with pagination)
+- `PATCH /{user_id}` - Update user
+- `DELETE /{user_id}` - Delete user
+
+### Running the API
+```bash
+# Start development server with auto-reload
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Or use VSCode debug configuration (F5)
+# Select "FastAPI: Run API Server"
+
+# API will be available at:
+# - http://localhost:8000
+# - Docs: http://localhost:8000/docs
+# - ReDoc: http://localhost:8000/redoc
+```
 
 ## 📚 Documentation
 
-Documentation will cover:
-- VSCode extension recommendations
-- Recommended settings.json configuration
-- Tool-specific configurations
-- Common issues and solutions
-- Performance comparisons
+Documentation covers:
+- ✅ VSCode extension recommendations (`.vscode.example/extensions.json`)
+- ✅ Workspace settings configuration (`.vscode.example/settings.json`)
+- ✅ Development tasks (`.vscode.example/tasks.json`)
+- ✅ Debug configurations (`.vscode.example/launch.json`)
+- ✅ Tool-specific configurations (ruff, pyright, pytest)
+- ⏳ SQLAlchemy vs Prisma comparison (In Progress)
+- ⏳ Performance benchmarks (Planned)
 
 ## 🤝 Contributing
 
@@ -195,8 +287,17 @@ MIT License
 
 ## 🔗 Resources
 
-- [uv Documentation](https://github.com/astral-sh/uv)
-- [ruff Documentation](https://docs.astral.sh/ruff/)
-- [pyright Documentation](https://github.com/microsoft/pyright)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [SQLAlchemy Documentation](https://www.sqlalchemy.org/)
+### Tools
+- [uv Documentation](https://github.com/astral-sh/uv) - Fast Python package manager
+- [ruff Documentation](https://docs.astral.sh/ruff/) - Extremely fast Python linter
+- [pyright Documentation](https://github.com/microsoft/pyright) - Static type checker
+
+### Frameworks
+- [FastAPI Documentation](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [SQLAlchemy Documentation](https://www.sqlalchemy.org/) - Python SQL toolkit and ORM
+- [Prisma Documentation](https://www.prisma.io/docs) - Next-generation ORM
+- [Pydantic Documentation](https://docs.pydantic.dev/) - Data validation library
+
+### Testing
+- [pytest Documentation](https://docs.pytest.org/) - Testing framework
+- [pytest-asyncio](https://pytest-asyncio.readthedocs.io/) - Asyncio support for pytest
