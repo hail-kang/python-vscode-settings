@@ -34,7 +34,8 @@ python-vscode-settings/
 ├── .vscode.example/                         # Example VSCode configuration
 │   ├── settings.json                        # Example settings
 │   ├── extensions.json                      # Example extensions
-│   └── tasks.json                           # Development tasks
+│   ├── tasks.json                           # Development tasks
+│   └── launch.json                          # Debug configurations
 ├── apps/                                    # Applications
 │   └── api/                                 # FastAPI application
 │       ├── src/                             # API source code
@@ -122,6 +123,16 @@ The `.vscode/tasks.json` provides common development commands:
 - `uvicorn: run dev server` - Start FastAPI development server
 
 Access via: `Cmd+Shift+P` → "Tasks: Run Task"
+
+### VSCode Debugging
+The `.vscode/launch.json` provides debug configurations:
+- `FastAPI: Run API Server` - Debug FastAPI with auto-reload
+- `FastAPI: Run API Server (No Reload)` - Debug FastAPI without reload
+- `Python: Current File` - Debug currently open Python file
+- `Pytest: Current File` - Debug tests in current file
+- `Pytest: All Tests` - Debug all tests
+
+Access via: `F5` or Debug panel (`Cmd+Shift+D`)
 
 ### Ruff Configuration
 Root-level configuration for entire monorepo:
