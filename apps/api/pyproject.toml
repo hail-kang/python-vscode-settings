@@ -11,7 +11,8 @@ dependencies = [
     "pydantic-settings>=2.1.0",
     "aiosqlite>=0.19.0",  # Async SQLite driver
     "greenlet>=3.0.0",  # Required for SQLAlchemy async
-    "db",  # Shared database models package
+    "my-sqlalchemy",  # Shared SQLAlchemy models package
+    "my-prisma",  # Shared Prisma models package
 ]
 
 [dependency-groups]
@@ -30,7 +31,8 @@ build-backend = "hatchling.build"
 packages = ["src"]
 
 [tool.uv.sources]
-db = { workspace = true }
+my-sqlalchemy = { workspace = true }
+my-prisma = { workspace = true }
 
 # ===== Tool Configurations =====
 

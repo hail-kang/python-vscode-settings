@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from config import settings
 from database import init_db
 from routers import users_router
+from routers.users_prisma import router as users_prisma_router
 
 
 @asynccontextmanager
@@ -29,6 +30,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(users_router, prefix=settings.api_v1_prefix)
+app.include_router(users_prisma_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/")

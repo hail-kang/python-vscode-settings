@@ -2,9 +2,9 @@
 
 from collections.abc import AsyncGenerator, Generator
 
-from fastapi.testclient import TestClient
 import pytest
 import pytest_asyncio
+from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # Import User model to register it with Base
