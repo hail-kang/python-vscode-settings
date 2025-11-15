@@ -12,16 +12,21 @@ from main import app
 
 @pytest_asyncio.fixture
 async def prisma_client() -> AsyncGenerator[Prisma, None]:
-    """Create Prisma client for testing."""
+    """Create Prisma client for testing and override dependency."""
     import os
+
+    from routers import users_prisma
 
     # Use the dev.db that was created by prisma migrate
     test_db = "file:../../packages/prisma/dev.db"
     original_url = os.environ.get("DATABASE_URL")
     os.environ["DATABASE_URL"] = test_db
 
-    client = Prisma()
-    await client.connect()
+    # Initialize global Prisma client
+    await users_prisma.init_prisma()
+
+    # Get the initialized client
+    client = await users_prisma.get_prisma_client()
 
     # Clean up database before test
     await client.user.delete_many()
@@ -30,7 +35,9 @@ async def prisma_client() -> AsyncGenerator[Prisma, None]:
 
     # Clean up database after test
     await client.user.delete_many()
-    await client.disconnect()
+
+    # Close Prisma client
+    await users_prisma.close_prisma()
 
     # Restore original DATABASE_URL
     if original_url:

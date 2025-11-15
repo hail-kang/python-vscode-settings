@@ -1,6 +1,6 @@
 """User API endpoints using Prisma ORM."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from prisma import Prisma
 from prisma.errors import UniqueViolationError
 
@@ -8,13 +8,30 @@ from schemas import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/prisma/users", tags=["users-prisma"])
 
+# Global Prisma client instance
+_prisma_client: Prisma | None = None
+
 
 async def get_prisma_client() -> Prisma:
-    """Get Prisma client instance."""
-    prisma = Prisma()
-    if not prisma.is_connected():
-        await prisma.connect()
-    return prisma
+    """Get Prisma client instance as a dependency."""
+    if _prisma_client is None:
+        raise RuntimeError("Prisma client not initialized. Call init_prisma() first.")
+    return _prisma_client
+
+
+async def init_prisma() -> None:
+    """Initialize Prisma client (called from lifespan)."""
+    global _prisma_client
+    _prisma_client = Prisma()
+    await _prisma_client.connect()
+
+
+async def close_prisma() -> None:
+    """Close Prisma client (called from lifespan)."""
+    global _prisma_client
+    if _prisma_client is not None:
+        await _prisma_client.disconnect()
+        _prisma_client = None
 
 
 def prisma_to_response(prisma_user: dict) -> dict:
@@ -31,9 +48,10 @@ def prisma_to_response(prisma_user: dict) -> dict:
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate) -> dict:
+async def create_user(
+    user: UserCreate, prisma: Prisma = Depends(get_prisma_client)
+) -> dict:
     """Create a new user using Prisma."""
-    prisma = await get_prisma_client()
 
     try:
         new_user = await prisma.user.create(
@@ -54,9 +72,8 @@ async def create_user(user: UserCreate) -> dict:
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int) -> dict:
+async def get_user(user_id: int, prisma: Prisma = Depends(get_prisma_client)) -> dict:
     """Get a user by ID using Prisma."""
-    prisma = await get_prisma_client()
 
     db_user = await prisma.user.find_unique(where={"id": user_id})
     if not db_user:
@@ -68,18 +85,20 @@ async def get_user(user_id: int) -> dict:
 
 
 @router.get("/", response_model=list[UserResponse])
-async def list_users(skip: int = 0, limit: int = 100) -> list[dict]:
+async def list_users(
+    skip: int = 0, limit: int = 100, prisma: Prisma = Depends(get_prisma_client)
+) -> list[dict]:
     """List all users with pagination using Prisma."""
-    prisma = await get_prisma_client()
 
     users = await prisma.user.find_many(skip=skip, take=limit)
     return [prisma_to_response(user.model_dump()) for user in users]
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
-async def update_user(user_id: int, user_update: UserUpdate) -> dict:
+async def update_user(
+    user_id: int, user_update: UserUpdate, prisma: Prisma = Depends(get_prisma_client)
+) -> dict:
     """Update a user using Prisma."""
-    prisma = await get_prisma_client()
 
     # Check if user exists
     db_user = await prisma.user.find_unique(where={"id": user_id})
@@ -122,9 +141,10 @@ async def update_user(user_id: int, user_update: UserUpdate) -> dict:
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int) -> None:
+async def delete_user(
+    user_id: int, prisma: Prisma = Depends(get_prisma_client)
+) -> None:
     """Delete a user using Prisma."""
-    prisma = await get_prisma_client()
 
     # Check if user exists
     db_user = await prisma.user.find_unique(where={"id": user_id})

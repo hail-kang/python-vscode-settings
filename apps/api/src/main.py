@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from config import settings
 from database import init_db
 from routers import users_router
+from routers.users_prisma import close_prisma, init_prisma
 from routers.users_prisma import router as users_prisma_router
 
 
@@ -16,8 +17,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup and shutdown events."""
     # Startup
     await init_db()
+    await init_prisma()
     yield
-    # Shutdown (cleanup if needed)
+    # Shutdown
+    await close_prisma()
 
 
 # Create FastAPI app

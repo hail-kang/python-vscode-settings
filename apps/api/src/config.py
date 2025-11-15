@@ -1,5 +1,7 @@
 """Application configuration."""
 
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,9 +22,13 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "sqlite:///./app.db"
+    prisma_database_url: str = "file:../../packages/prisma/dev.db"
 
     # API
     api_v1_prefix: str = "/api/v1"
 
 
 settings = Settings()
+
+# Set DATABASE_URL environment variable for Prisma
+os.environ.setdefault("DATABASE_URL", settings.prisma_database_url)
