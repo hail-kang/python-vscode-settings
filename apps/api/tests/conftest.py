@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # Import User model to register it with Base
-from models import User  # noqa: F401
-from models.base import Base
+from my_sqlalchemy.models import User  # noqa: F401
+from my_sqlalchemy.models.base import Base
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

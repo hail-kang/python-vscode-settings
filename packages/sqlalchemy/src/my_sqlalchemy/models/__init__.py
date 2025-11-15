@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-from models.base import Base
-from models.user import User
+from my_sqlalchemy.models.base import Base
+from my_sqlalchemy.models.user import User
 
 __all__ = ["Base", "User"]
