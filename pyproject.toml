@@ -66,6 +66,8 @@ select = [
 ignore = [
     "ANN101",  # Missing type annotation for self
     "ANN102",  # Missing type annotation for cls
+    "B008",    # Do not perform function calls in argument defaults (FastAPI Depends is safe)
+    "PLC0415", # Import should be at top-level (allow lazy imports for circular dependencies)
 ]
 
 # Allow autofix for all enabled rules

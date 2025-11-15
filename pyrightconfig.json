@@ -51,12 +51,15 @@
   "stubPath": "typings",
   "executionEnvironments": [
     {
-      "root": "apps/api",
+      "root": "apps/api/src",
+      "pythonVersion": "3.10",
+      "pythonPlatform": "All"
+    },
+    {
+      "root": "apps/api/tests",
       "pythonVersion": "3.10",
       "pythonPlatform": "All",
-      "extraPaths": [
-        "apps/api/src"
-      ]
+      "extraPaths": ["apps/api/src"]
     }
   ]
 }
