@@ -14,13 +14,30 @@ from main import app
 async def prisma_client() -> AsyncGenerator[Prisma, None]:
     """Create Prisma client for testing and override dependency."""
     import os
+    import subprocess
+    import tempfile
+    from pathlib import Path
 
     from routers import users_prisma
 
-    # Use the dev.db that was created by prisma migrate
-    test_db = "file:../../packages/prisma/dev.db"
+    # Create a temporary database file for testing
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        test_db_path = tmp.name
+
+    test_db = f"file:{test_db_path}"
     original_url = os.environ.get("DATABASE_URL")
     os.environ["DATABASE_URL"] = test_db
+
+    # Apply Prisma schema to temp database
+    schema_path = Path(__file__).parent.parent.parent.parent / "packages" / "prisma" / "schema.prisma"
+    env = os.environ.copy()
+    env["DATABASE_URL"] = test_db
+    subprocess.run(
+        ["prisma", "db", "push", f"--schema={schema_path}", "--skip-generate"],
+        env=env,
+        check=True,
+        capture_output=True,
+    )
 
     # Initialize global Prisma client
     await users_prisma.init_prisma()
@@ -44,6 +61,12 @@ async def prisma_client() -> AsyncGenerator[Prisma, None]:
         os.environ["DATABASE_URL"] = original_url
     else:
         os.environ.pop("DATABASE_URL", None)
+
+    # Delete temporary database file
+    try:
+        Path(test_db_path).unlink()
+    except Exception:
+        pass
 
 
 @pytest.mark.asyncio

@@ -22,7 +22,8 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "sqlite:///./app.db"
-    prisma_database_url: str = "file:../../packages/prisma/dev.db"
+    # Prisma uses the same database file
+    prisma_database_url: str = "file:./app.db"
 
     # API
     api_v1_prefix: str = "/api/v1"
