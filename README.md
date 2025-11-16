@@ -113,7 +113,7 @@ uv sync --all-groups
 ```
 
 This will:
-- Create `.venv` in project root
+- Create `.venv` in project root (unified virtual environment for all packages)
 - Install all dependencies from workspace and apps
 - Generate `uv.lock` file
 
@@ -135,6 +135,8 @@ cp -r .vscode.example .vscode
 ```bash
 code .
 ```
+
+> **📚 UV Workspace Configuration**: This project uses UV workspace to manage a unified virtual environment across all packages and apps. For detailed information about how `[tool.uv.workspace]`, `[tool.uv.sources]`, and the integrated `.venv` work, see [UV_WORKSPACE_CONFIGURATION.md](UV_WORKSPACE_CONFIGURATION.md).
 
 ## ⚙️ Configuration Goals
 
@@ -384,6 +386,11 @@ Documentation covers:
 - ✅ Tool-specific configurations (ruff, pyright, pytest)
 - ✅ Environment configuration (`.env.example`)
 - ✅ SQLAlchemy vs SQLModel vs Prisma comparison
+- ✅ **UV Workspace Configuration** ([UV_WORKSPACE_CONFIGURATION.md](UV_WORKSPACE_CONFIGURATION.md))
+  - How UV workspace manages unified virtual environment
+  - Detailed pyproject.toml configuration explanation
+  - Dependency resolution and editable installation mechanism
+  - UV command usage and migration guide
 - ⏳ Performance benchmarks (Planned)
 
 ## 🔄 ORM Comparison: SQLAlchemy vs SQLModel vs Prisma
