@@ -15,20 +15,21 @@ _prisma_client: Prisma | None = None
 async def get_prisma_client() -> Prisma:
     """Get Prisma client instance as a dependency."""
     if _prisma_client is None:
-        raise RuntimeError("Prisma client not initialized. Call init_prisma() first.")
+        msg = "Prisma client not initialized. Call init_prisma() first."
+        raise RuntimeError(msg)
     return _prisma_client
 
 
 async def init_prisma() -> None:
     """Initialize Prisma client (called from lifespan)."""
-    global _prisma_client
+    global _prisma_client  # noqa: PLW0603
     _prisma_client = Prisma()
     await _prisma_client.connect()
 
 
 async def close_prisma() -> None:
     """Close Prisma client (called from lifespan)."""
-    global _prisma_client
+    global _prisma_client  # noqa: PLW0603
     if _prisma_client is not None:
         await _prisma_client.disconnect()
         _prisma_client = None
@@ -48,9 +49,7 @@ def prisma_to_response(prisma_user: dict) -> dict:
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(
-    user: UserCreate, prisma: Prisma = Depends(get_prisma_client)
-) -> dict:
+async def create_user(user: UserCreate, prisma: Prisma = Depends(get_prisma_client)) -> dict:
     """Create a new user using Prisma."""
 
     try:
@@ -125,7 +124,8 @@ async def update_user(
 
     try:
         updated_user = await prisma.user.update(
-            where={"id": user_id}, data=update_data  # type: ignore[arg-type]
+            where={"id": user_id},
+            data=update_data,  # type: ignore[arg-type]
         )
         if updated_user:
             return prisma_to_response(updated_user.model_dump())
@@ -141,9 +141,7 @@ async def update_user(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(
-    user_id: int, prisma: Prisma = Depends(get_prisma_client)
-) -> None:
+async def delete_user(user_id: int, prisma: Prisma = Depends(get_prisma_client)) -> None:
     """Delete a user using Prisma."""
 
     # Check if user exists

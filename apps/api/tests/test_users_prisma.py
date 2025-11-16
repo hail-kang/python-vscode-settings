@@ -3,9 +3,9 @@
 from collections.abc import AsyncGenerator
 
 import httpx
+from prisma import Prisma
 import pytest
 import pytest_asyncio
-from prisma import Prisma
 
 from main import app
 
@@ -14,9 +14,9 @@ from main import app
 async def prisma_client() -> AsyncGenerator[Prisma, None]:
     """Create Prisma client for testing and override dependency."""
     import os
+    from pathlib import Path
     import subprocess
     import tempfile
-    from pathlib import Path
 
     from routers import users_prisma
 
@@ -29,10 +29,15 @@ async def prisma_client() -> AsyncGenerator[Prisma, None]:
     os.environ["DATABASE_URL"] = test_db
 
     # Apply Prisma schema to temp database
-    schema_path = Path(__file__).parent.parent.parent.parent / "packages" / "prisma" / "schema.prisma"
+    schema_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "packages"
+        / "prisma"
+        / "schema.prisma"
+    )
     env = os.environ.copy()
     env["DATABASE_URL"] = test_db
-    subprocess.run(
+    subprocess.run(  # noqa: ASYNC221
         ["prisma", "db", "push", f"--schema={schema_path}", "--skip-generate"],
         env=env,
         check=True,
@@ -63,10 +68,7 @@ async def prisma_client() -> AsyncGenerator[Prisma, None]:
         os.environ.pop("DATABASE_URL", None)
 
     # Delete temporary database file
-    try:
-        Path(test_db_path).unlink()
-    except Exception:
-        pass
+    Path(test_db_path).unlink(missing_ok=True)
 
 
 @pytest.mark.asyncio
@@ -119,7 +121,9 @@ async def test_get_user_prisma(prisma_client: Prisma) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_user_not_found_prisma(prisma_client: Prisma) -> None:
+async def test_get_user_not_found_prisma(
+    prisma_client: Prisma,  # noqa: ARG001
+) -> None:
     """Test getting a non-existent user with Prisma."""
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
