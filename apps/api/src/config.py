@@ -37,7 +37,7 @@ class Settings(BaseSettings):
         return f"file:{self.db_path}"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]
 
 # Set DATABASE_URL environment variable for Prisma
 os.environ.setdefault("DATABASE_URL", settings.prisma_database_url)
