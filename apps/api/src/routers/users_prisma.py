@@ -76,7 +76,7 @@ async def get_user(user_id: int, prisma: Prisma = Depends(get_prisma_client)) ->
 @router.get("/", response_model=list[UserListItem])
 async def list_users(
     skip: int = 0, limit: int = 100, prisma: Prisma = Depends(get_prisma_client)
-) -> list[dict]:
+) -> list[UserListItem]:
     """List all users with pagination using Prisma (returns minimal fields)."""
 
     users = await prisma.user.find_many(
@@ -85,7 +85,7 @@ async def list_users(
     )
     # Return only minimal fields for list response
     return [
-        {"id": user.id, "username": user.username, "created_at": user.createdAt}
+        UserListItem(id=user.id, username=user.username, created_at=user.createdAt)
         for user in users
     ]
 

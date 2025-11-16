@@ -62,15 +62,14 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)) -> User:
 @router.get("/", response_model=list[UserListItem])
 async def list_users(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
-) -> list[dict]:
+) -> list[UserListItem]:
     """List all users with pagination (returns minimal fields)."""
     # Select only required fields for better performance
     result = await db.execute(
         select(User.id, User.username, User.created_at).offset(skip).limit(limit)
     )
     return [
-        {"id": row.id, "username": row.username, "created_at": row.created_at}
-        for row in result.all()
+        UserListItem.model_validate(row, from_attributes=True) for row in result.all()
     ]
 
 
