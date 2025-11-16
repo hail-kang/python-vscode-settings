@@ -29,8 +29,18 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class UserListItem(BaseModel):
+    """Schema for user list item (minimal fields)."""
+
+    id: int
+    username: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class UserResponse(UserBase):
-    """Schema for user response."""
+    """Schema for user detail response."""
 
     id: int
     created_at: datetime
