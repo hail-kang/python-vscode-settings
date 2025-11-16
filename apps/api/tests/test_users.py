@@ -105,6 +105,11 @@ def test_list_users(client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 3
+    # List response only returns id, username, created_at
+    assert "id" in data[0]
+    assert "username" in data[0]
+    assert "created_at" in data[0]
+    assert "email" not in data[0]  # email should not be in list response
 
 
 def test_list_users_pagination(client: TestClient) -> None:
@@ -125,6 +130,10 @@ def test_list_users_pagination(client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert len(data) == 2
+    # List response only returns minimal fields
+    assert "id" in data[0]
+    assert "username" in data[0]
+    assert "created_at" in data[0]
 
 
 def test_update_user(client: TestClient) -> None:

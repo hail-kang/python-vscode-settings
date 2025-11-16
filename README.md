@@ -67,8 +67,10 @@ python-vscode-settings/
 │       ├── schema.prisma                    # Prisma schema definition
 │       ├── migrations/                      # Database migrations
 │       ├── src/
-│       │   ├── __init__.py                  # Prisma client wrapper
-│       │   └── client.py
+│       │   └── my_prisma/                   # Explicit namespace
+│       │       ├── __init__.py              # Prisma client wrapper
+│       │       ├── client.py                # Prisma client instance
+│       │       └── manager.py               # PrismaManager singleton
 │       └── pyproject.toml                   # Prisma dependency
 ├── pyproject.toml                           # Workspace & tool config
 ├── pyrightconfig.json                       # Pyright configuration
@@ -195,9 +197,16 @@ Workspace-aware type checking:
    - Complete Prisma-based API endpoints (`/api/v1/prisma/users`)
    - Database migrations with Prisma Migrate
    - Comprehensive Prisma test suite (7 tests)
+   - PrismaManager singleton for client lifecycle management
    - Side-by-side comparison capability
 
-5. **Phase 5**: Documentation and comparison (In Progress)
+5. **Phase 5**: API optimization ✅
+   - Differential response schemas (list vs detail endpoints)
+   - Query optimization for list endpoints
+   - SQLAlchemy: Field-level SELECT for minimal data transfer
+   - Prisma: Python-level field filtering (DB-level select not supported)
+
+6. **Phase 6**: Documentation and comparison (In Progress)
    - SQLAlchemy vs Prisma comparison
    - Performance benchmarks
    - Developer experience analysis
@@ -237,25 +246,64 @@ uv run pytest apps/api/tests/test_users_prisma.py -v
 ### SQLAlchemy Endpoints
 Base path: `/api/v1/users`
 
-- `POST /` - Create new user
-- `GET /{user_id}` - Get user by ID
-- `GET /` - List users (with pagination)
-- `PATCH /{user_id}` - Update user
+- `POST /` - Create new user (returns full user details)
+- `GET /{user_id}` - Get user by ID (returns full user details)
+- `GET /` - List users with pagination (returns minimal fields: id, username, created_at)
+- `PATCH /{user_id}` - Update user (returns full user details)
 - `DELETE /{user_id}` - Delete user
 
 ### Prisma Endpoints
 Base path: `/api/v1/prisma/users`
 
-- `POST /` - Create new user
-- `GET /{user_id}` - Get user by ID
-- `GET /` - List users (with pagination)
-- `PATCH /{user_id}` - Update user
+- `POST /` - Create new user (returns full user details)
+- `GET /{user_id}` - Get user by ID (returns full user details)
+- `GET /` - List users with pagination (returns minimal fields: id, username, created_at)
+- `PATCH /{user_id}` - Update user (returns full user details)
 - `DELETE /{user_id}` - Delete user
+
+### Response Schema Optimization
+
+The API uses different Pydantic schemas for list and detail endpoints:
+
+**List Response** (`UserListItem`):
+```json
+{
+  "id": 1,
+  "username": "testuser",
+  "created_at": "2024-11-16T08:00:00"
+}
+```
+
+**Detail Response** (`UserResponse`):
+```json
+{
+  "id": 1,
+  "email": "test@example.com",
+  "username": "testuser",
+  "full_name": "Test User",
+  "is_active": true,
+  "created_at": "2024-11-16T08:00:00",
+  "updated_at": "2024-11-16T08:00:00"
+}
+```
+
+**Query Optimization**:
+- **SQLAlchemy**: Uses field-level SELECT to fetch only required columns from database
+  ```python
+  select(User.id, User.username, User.created_at)
+  ```
+- **Prisma**: Fetches full records from database, filters fields at Python level
+  - Prisma Python Client (v0.11.0) does not support dynamic `select` parameter
+  - TypeScript/JavaScript Prisma supports `select: { id: true, username: true }`
+  - Python implementation uses full record retrieval with post-processing
 
 ### Running the API
 ```bash
+# Navigate to API directory
+cd apps/api
+
 # Start development server with auto-reload
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 # Or use VSCode debug configuration (F5)
 # Select "FastAPI: Run API Server"
@@ -266,6 +314,16 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 # - ReDoc: http://localhost:8000/redoc
 ```
 
+### Environment Configuration
+```bash
+# Create .env file in apps/api/
+cd apps/api
+cp .env.example .env
+
+# Edit .env to configure database path
+# DB_PATH=./app.db  # Path to SQLite database (used by both SQLAlchemy and Prisma)
+```
+
 ## 📚 Documentation
 
 Documentation covers:
@@ -274,8 +332,56 @@ Documentation covers:
 - ✅ Development tasks (`.vscode.example/tasks.json`)
 - ✅ Debug configurations (`.vscode.example/launch.json`)
 - ✅ Tool-specific configurations (ruff, pyright, pytest)
+- ✅ Environment configuration (`.env.example`)
 - ⏳ SQLAlchemy vs Prisma comparison (In Progress)
 - ⏳ Performance benchmarks (Planned)
+
+## 🔍 Key Learnings
+
+### Monorepo Package Structure
+Both SQLAlchemy and Prisma packages follow consistent `src` layout:
+```
+packages/{package-name}/
+├── src/
+│   └── my_{package-name}/    # Explicit namespace prevents conflicts
+│       ├── __init__.py
+│       └── ...
+└── pyproject.toml            # packages = ["src"]
+```
+
+### Prisma Python Client Limitations
+**Important**: Prisma Python Client (v0.11.0) has different capabilities than TypeScript/JavaScript version:
+
+❌ **Not Supported**:
+- Dynamic `select` parameter for field selection
+  ```python
+  # This does NOT work in Python (works in TypeScript)
+  await prisma.user.find_many(
+      select={"id": True, "username": True}
+  )
+  ```
+
+✅ **Current Workaround**:
+- Fetch full records, filter at Python level
+  ```python
+  users = await prisma.user.find_many()
+  return [{"id": u.id, "username": u.username} for u in users]
+  ```
+
+✅ **Alternative** (Complex):
+- Use Partial Types (requires pre-defined classes)
+- More complex to maintain and not recommended for simple use cases
+
+**SQLAlchemy Advantage**: Supports field-level SELECT for true query optimization
+```python
+# SQLAlchemy can select specific columns
+select(User.id, User.username, User.created_at)
+```
+
+### Database Path Management
+- Single `DB_PATH` environment variable for both ORMs
+- Absolute path calculation from file location prevents working directory issues
+- Shared database file ensures consistency across SQLAlchemy and Prisma endpoints
 
 ## 🤝 Contributing
 

@@ -165,8 +165,12 @@ async def test_list_users_prisma(prisma_client: Prisma) -> None:
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
-    assert data[0]["email"] == "user1@example.com"
-    assert data[1]["email"] == "user2@example.com"
+    # List response only returns id, username, created_at
+    assert data[0]["username"] == "user1"
+    assert data[1]["username"] == "user2"
+    assert "id" in data[0]
+    assert "created_at" in data[0]
+    assert "email" not in data[0]  # email should not be in list response
 
 
 @pytest.mark.asyncio
