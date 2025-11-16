@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from prisma import Prisma
 from prisma.errors import UniqueViolationError
+from prisma.partials import UserMinimal
 
 from my_prisma import PrismaManager
 from schemas import UserCreate, UserListItem, UserResponse, UserUpdate
@@ -26,15 +27,15 @@ async def close_prisma() -> None:
 
 
 def prisma_to_response(prisma_user: dict) -> dict:
-    """Convert Prisma camelCase to snake_case for response schema."""
+    """Convert Prisma model to response schema (now using snake_case)."""
     return {
         "id": prisma_user["id"],
         "email": prisma_user["email"],
         "username": prisma_user["username"],
-        "full_name": prisma_user.get("fullName"),
-        "is_active": prisma_user["isActive"],
-        "created_at": prisma_user["createdAt"],
-        "updated_at": prisma_user["updatedAt"],
+        "full_name": prisma_user.get("full_name"),
+        "is_active": prisma_user["is_active"],
+        "created_at": prisma_user["created_at"],
+        "updated_at": prisma_user["updated_at"],
     }
 
 
@@ -47,9 +48,9 @@ async def create_user(user: UserCreate, prisma: Prisma = Depends(get_prisma_clie
             data={
                 "email": user.email,
                 "username": user.username,
-                "fullName": user.full_name,
-                "hashedPassword": user.hashed_password,  # In production, hash the password!
-                "isActive": user.is_active,
+                "full_name": user.full_name,
+                "hashed_password": user.hashed_password,  # In production, hash the password!
+                "is_active": user.is_active,
             }
         )
         return prisma_to_response(new_user.model_dump())
@@ -77,15 +78,19 @@ async def get_user(user_id: int, prisma: Prisma = Depends(get_prisma_client)) ->
 async def list_users(
     skip: int = 0, limit: int = 100, prisma: Prisma = Depends(get_prisma_client)
 ) -> list[UserListItem]:
-    """List all users with pagination using Prisma (returns minimal fields)."""
+    """List all users with pagination using Prisma with field-level SELECT.
 
-    users = await prisma.user.find_many(
+    Uses Prisma partial types to select only required fields (id, username, created_at)
+    for optimized database queries.
+    """
+    # Use partial type to select only needed fields at DB level
+    users = await UserMinimal.prisma(prisma).find_many(
         skip=skip,
         take=limit,
     )
     # Return only minimal fields for list response
     return [
-        UserListItem(id=user.id, username=user.username, created_at=user.createdAt)
+        UserListItem(id=user.id, username=user.username, created_at=user.created_at)
         for user in users
     ]
 
@@ -104,20 +109,8 @@ async def update_user(
             detail="User not found",
         )
 
-    # Convert snake_case to camelCase for Prisma
-    update_data: dict = {}
-    field_mapping = {
-        "email": "email",
-        "username": "username",
-        "full_name": "fullName",
-        "hashed_password": "hashedPassword",
-        "is_active": "isActive",
-        "is_superuser": "isSuperuser",
-    }
-
-    for field, value in user_update.model_dump(exclude_unset=True).items():
-        if field in field_mapping:
-            update_data[field_mapping[field]] = value
+    # Build update data (now using snake_case, no conversion needed)
+    update_data = user_update.model_dump(exclude_unset=True)
 
     try:
         updated_user = await prisma.user.update(
