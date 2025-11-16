@@ -1,10 +1,10 @@
 """User API endpoints using Prisma ORM."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from my_prisma import PrismaManager
 from prisma import Prisma
 from prisma.errors import UniqueViolationError
 
+from my_prisma import PrismaManager
 from schemas import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/prisma/users", tags=["users-prisma"])
