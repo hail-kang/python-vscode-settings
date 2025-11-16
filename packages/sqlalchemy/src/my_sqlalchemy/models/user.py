@@ -11,7 +11,7 @@ from my_sqlalchemy.models.base import Base
 class User(Base):
     """User model for authentication and user management."""
 
-    __tablename__ = "users"
+    __tablename__ = "user"  # Match SQLModel's automatic table name
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)

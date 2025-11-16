@@ -13,6 +13,7 @@ dependencies = [
     "greenlet>=3.0.0",  # Required for SQLAlchemy async
     "my-sqlalchemy",  # Shared SQLAlchemy models package
     "my-prisma",  # Shared Prisma models package
+    "my-sqlmodel",  # Shared SQLModel models package
 ]
 
 [dependency-groups]
@@ -33,6 +34,7 @@ packages = ["src"]
 [tool.uv.sources]
 my-sqlalchemy = { workspace = true }
 my-prisma = { workspace = true }
+my-sqlmodel = { workspace = true }
 
 # ===== Tool Configurations =====
 
