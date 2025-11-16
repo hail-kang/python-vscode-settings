@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
-    # Database - DB_PATH is required and must be set via environment variable
-    db_path: str
+    # Database - DB_PATH should be set via environment variable
+    db_path: str = ""
 
     # API
     api_v1_prefix: str = "/api/v1"
@@ -29,15 +29,27 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         """SQLAlchemy database URL."""
+        if not self.db_path:
+            msg = (
+                "DB_PATH environment variable is required but not set. "
+                "Please set DB_PATH in your .env file or environment."
+            )
+            raise ValueError(msg)
         return f"sqlite:///{self.db_path}"
 
     @property
     def prisma_database_url(self) -> str:
         """Prisma database URL."""
+        if not self.db_path:
+            msg = (
+                "DB_PATH environment variable is required but not set. "
+                "Please set DB_PATH in your .env file or environment."
+            )
+            raise ValueError(msg)
         return f"file:{self.db_path}"
 
 
-settings = Settings()  # type: ignore[call-arg]
+settings = Settings()
 
 # Set DATABASE_URL environment variable for Prisma
 os.environ.setdefault("DATABASE_URL", settings.prisma_database_url)
