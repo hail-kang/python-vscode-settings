@@ -103,9 +103,9 @@ async def test_get_user_prisma(prisma_client: Prisma) -> None:
         data={
             "email": "get@example.com",
             "username": "getuser",
-            "fullName": "Get User",
-            "hashedPassword": "hashedpass123",
-            "isActive": True,
+            "full_name": "Get User",
+            "hashed_password": "hashedpass123",
+            "is_active": True,
         }
     )
 
@@ -142,18 +142,18 @@ async def test_list_users_prisma(prisma_client: Prisma) -> None:
         data={
             "email": "user1@example.com",
             "username": "user1",
-            "fullName": "User One",
-            "hashedPassword": "hashedpass123",
-            "isActive": True,
+            "full_name": "User One",
+            "hashed_password": "hashedpass123",
+            "is_active": True,
         }
     )
     await prisma_client.user.create(
         data={
             "email": "user2@example.com",
             "username": "user2",
-            "fullName": "User Two",
-            "hashedPassword": "hashedpass123",
-            "isActive": True,
+            "full_name": "User Two",
+            "hashed_password": "hashedpass123",
+            "is_active": True,
         }
     )
 
@@ -181,9 +181,9 @@ async def test_update_user_prisma(prisma_client: Prisma) -> None:
         data={
             "email": "update@example.com",
             "username": "updateuser",
-            "fullName": "Update User",
-            "hashedPassword": "hashedpass123",
-            "isActive": True,
+            "full_name": "Update User",
+            "hashed_password": "hashedpass123",
+            "is_active": True,
         }
     )
 
@@ -210,9 +210,9 @@ async def test_delete_user_prisma(prisma_client: Prisma) -> None:
         data={
             "email": "delete@example.com",
             "username": "deleteuser",
-            "fullName": "Delete User",
-            "hashedPassword": "hashedpass123",
-            "isActive": True,
+            "full_name": "Delete User",
+            "hashed_password": "hashedpass123",
+            "is_active": True,
         }
     )
 
@@ -236,9 +236,9 @@ async def test_create_user_duplicate_email_prisma(prisma_client: Prisma) -> None
         data={
             "email": "duplicate@example.com",
             "username": "user1",
-            "fullName": "User One",
-            "hashedPassword": "hashedpass123",
-            "isActive": True,
+            "full_name": "User One",
+            "hashed_password": "hashedpass123",
+            "is_active": True,
         }
     )
 
