@@ -1,39 +1,13 @@
 """User API endpoints using Prisma ORM."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from my_prisma import PrismaManager
 from prisma import Prisma
 from prisma.errors import UniqueViolationError
 
 from schemas import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/prisma/users", tags=["users-prisma"])
-
-
-class PrismaManager:
-    """Singleton manager for Prisma client."""
-
-    _client: Prisma | None = None
-
-    @classmethod
-    async def init(cls) -> None:
-        """Initialize Prisma client (called from lifespan)."""
-        cls._client = Prisma()
-        await cls._client.connect()
-
-    @classmethod
-    async def close(cls) -> None:
-        """Close Prisma client (called from lifespan)."""
-        if cls._client is not None:
-            await cls._client.disconnect()
-            cls._client = None
-
-    @classmethod
-    def get(cls) -> Prisma:
-        """Get Prisma client instance as a dependency."""
-        if cls._client is None:
-            msg = "Prisma client not initialized. Call PrismaManager.init() first."
-            raise RuntimeError(msg)
-        return cls._client
 
 
 async def get_prisma_client() -> Prisma:
