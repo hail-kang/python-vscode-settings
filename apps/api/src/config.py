@@ -5,10 +5,6 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Get the project root directory (apps/api/)
-PROJECT_ROOT = Path(__file__).parent.parent
-DB_PATH = PROJECT_ROOT / "app.db"
-
 
 class Settings(BaseSettings):
     """Application settings."""
@@ -25,13 +21,21 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
-    # Database - use absolute paths to ensure both ORMs use the same file
-    database_url: str = f"sqlite:///{DB_PATH}"
-    # Prisma uses the same database file
-    prisma_database_url: str = f"file:{DB_PATH}"
+    # Database
+    db_path: str = str(Path(__file__).parent.parent / "app.db")
 
     # API
     api_v1_prefix: str = "/api/v1"
+
+    @property
+    def database_url(self) -> str:
+        """SQLAlchemy database URL."""
+        return f"sqlite:///{self.db_path}"
+
+    @property
+    def prisma_database_url(self) -> str:
+        """Prisma database URL."""
+        return f"file:{self.db_path}"
 
 
 settings = Settings()
