@@ -1,15 +1,20 @@
 """Application configuration."""
 
 import os
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Get the apps/api directory (parent of src/)
+API_DIR = Path(__file__).parent.parent
+ENV_FILE = API_DIR / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
