@@ -1,7 +1,6 @@
 """Application configuration."""
 
 import os
-from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,8 +20,8 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
-    # Database
-    db_path: str = str(Path(__file__).parent.parent / "app.db")
+    # Database - DB_PATH is required and must be set via environment variable
+    db_path: str
 
     # API
     api_v1_prefix: str = "/api/v1"
