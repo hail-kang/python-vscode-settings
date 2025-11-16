@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from my_sqlalchemy.models import User
-from schemas import UserCreate, UserResponse, UserUpdate
+from schemas import UserCreate, UserListItem, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -59,13 +59,19 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)) -> User:
     return db_user
 
 
-@router.get("/", response_model=list[UserResponse])
+@router.get("/", response_model=list[UserListItem])
 async def list_users(
     skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
-) -> list[User]:
-    """List all users with pagination."""
-    result = await db.execute(select(User).offset(skip).limit(limit))
-    return list(result.scalars().all())
+) -> list[dict]:
+    """List all users with pagination (returns minimal fields)."""
+    # Select only required fields for better performance
+    result = await db.execute(
+        select(User.id, User.username, User.created_at).offset(skip).limit(limit)
+    )
+    return [
+        {"id": row.id, "username": row.username, "created_at": row.created_at}
+        for row in result.all()
+    ]
 
 
 @router.patch("/{user_id}", response_model=UserResponse)

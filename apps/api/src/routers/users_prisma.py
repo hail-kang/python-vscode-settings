@@ -5,7 +5,7 @@ from prisma import Prisma
 from prisma.errors import UniqueViolationError
 
 from my_prisma import PrismaManager
-from schemas import UserCreate, UserResponse, UserUpdate
+from schemas import UserCreate, UserListItem, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/prisma/users", tags=["users-prisma"])
 
@@ -73,14 +73,21 @@ async def get_user(user_id: int, prisma: Prisma = Depends(get_prisma_client)) ->
     return prisma_to_response(db_user.model_dump())
 
 
-@router.get("/", response_model=list[UserResponse])
+@router.get("/", response_model=list[UserListItem])
 async def list_users(
     skip: int = 0, limit: int = 100, prisma: Prisma = Depends(get_prisma_client)
 ) -> list[dict]:
-    """List all users with pagination using Prisma."""
+    """List all users with pagination using Prisma (returns minimal fields)."""
 
-    users = await prisma.user.find_many(skip=skip, take=limit)
-    return [prisma_to_response(user.model_dump()) for user in users]
+    users = await prisma.user.find_many(
+        skip=skip,
+        take=limit,
+    )
+    # Return only minimal fields for list response
+    return [
+        {"id": user.id, "username": user.username, "created_at": user.createdAt}
+        for user in users
+    ]
 
 
 @router.patch("/{user_id}", response_model=UserResponse)
