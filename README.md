@@ -25,6 +25,7 @@ This project is designed to validate and establish optimal VSCode settings for P
 ### Frameworks & Libraries
 - **FastAPI**: Modern web framework for building APIs
 - **SQLAlchemy**: SQL toolkit and ORM (async with aiosqlite)
+- **SQLModel**: Combines SQLAlchemy ORM with Pydantic validation
 - **Prisma**: Next-generation ORM with type-safe database client
 - **Pydantic**: Data validation using Python type annotations
 
@@ -42,14 +43,17 @@ python-vscode-settings/
 │       ├── src/                             # API source code
 │       │   ├── config.py                    # App configuration
 │       │   ├── database.py                  # SQLAlchemy async setup
+│       │   ├── database_sqlmodel.py         # SQLModel async setup
 │       │   ├── main.py                      # FastAPI app entry point
 │       │   ├── routers/                     # API route handlers
 │       │   │   ├── users.py                 # SQLAlchemy-based endpoints
+│       │   │   ├── users_sqlmodel.py        # SQLModel-based endpoints
 │       │   │   └── users_prisma.py          # Prisma-based endpoints
 │       │   └── schemas/                     # Pydantic schemas
 │       ├── tests/                           # Comprehensive test suite
 │       │   ├── conftest.py                  # Pytest fixtures
 │       │   ├── test_users.py                # SQLAlchemy tests (11 tests)
+│       │   ├── test_users_sqlmodel.py       # SQLModel tests (11 tests)
 │       │   └── test_users_prisma.py         # Prisma tests (7 tests)
 │       ├── pyproject.toml                   # App dependencies
 │       └── .python-version                  # Python 3.10.14
@@ -63,8 +67,18 @@ python-vscode-settings/
 │   │   │           ├── base.py              # Declarative base
 │   │   │           └── user.py              # User model (async)
 │   │   └── pyproject.toml                   # SQLAlchemy 2.0+ dependency
+│   ├── sqlmodel/                            # SQLModel package
+│   │   ├── src/
+│   │   │   └── my_sqlmodel/                 # Explicit namespace
+│   │   │       ├── __init__.py              # Package exports
+│   │   │       └── models/                  # Database models
+│   │   │           ├── __init__.py
+│   │   │           └── user.py              # User model (SQLModel + Pydantic)
+│   │   └── pyproject.toml                   # SQLModel dependency
 │   └── prisma/                              # Prisma ORM package
-│       ├── schema.prisma                    # Prisma schema definition
+│       ├── schema.prisma                    # Prisma schema definition (snake_case)
+│       ├── prisma/
+│       │   └── partial_types.py             # Partial type definitions (generation-time)
 │       ├── migrations/                      # Database migrations
 │       ├── src/
 │       │   └── my_prisma/                   # Explicit namespace
@@ -200,29 +214,38 @@ Workspace-aware type checking:
    - PrismaManager singleton for client lifecycle management
    - Side-by-side comparison capability
 
-5. **Phase 5**: API optimization ✅
+5. **Phase 5**: SQLModel integration ✅
+   - `packages/sqlmodel` with SQLModel combining ORM + Pydantic
+   - User model with automatic table naming
+   - Complete SQLModel-based API endpoints (`/api/v1/sqlmodel/users`)
+   - Comprehensive SQLModel test suite (11 tests)
+   - Three-way ORM comparison capability (SQLAlchemy, SQLModel, Prisma)
+
+6. **Phase 6**: API optimization ✅
    - Differential response schemas (list vs detail endpoints)
    - Query optimization for list endpoints
    - SQLAlchemy: Field-level SELECT for minimal data transfer
-   - Prisma: Python-level field filtering (DB-level select not supported)
+   - SQLModel: Field-level SELECT for minimal data transfer (inherits SQLAlchemy capabilities)
+   - Prisma: Field-level SELECT via Partial Types (defined at generation time)
 
-6. **Phase 6**: Documentation and comparison (In Progress)
-   - SQLAlchemy vs Prisma comparison
+7. **Phase 7**: Documentation and comparison (In Progress)
+   - SQLAlchemy vs SQLModel vs Prisma comparison
    - Performance benchmarks
    - Developer experience analysis
 
 ## 🧪 Testing Strategy
 
 ### Current Test Coverage
-- **Total Tests**: 18 (all passing)
+- **Total Tests**: 29 (all passing)
   - SQLAlchemy endpoints: 11 tests
+  - SQLModel endpoints: 11 tests
   - Prisma endpoints: 7 tests
 - **Test Framework**: pytest with pytest-asyncio
-- **Coverage Tools**: pytest-cov with HTML reports
-- **Database**: In-memory SQLite for SQLAlchemy, file-based for Prisma
+- **Coverage Tools**: pytest-cov with HTML reports (71% overall coverage)
+- **Database**: In-memory SQLite for SQLAlchemy and SQLModel, file-based for Prisma
 
 ### Test Categories
-- **CRUD Operations**: Create, Read, Update, Delete for both ORMs
+- **CRUD Operations**: Create, Read, Update, Delete for all three ORMs
 - **Validation**: Duplicate email/username handling
 - **Error Cases**: 404 not found, 400 bad request
 - **Pagination**: List operations with skip/limit
@@ -238,6 +261,7 @@ uv run pytest apps/api/tests/ --cov=src --cov-report=html
 
 # Run specific test file
 uv run pytest apps/api/tests/test_users.py -v
+uv run pytest apps/api/tests/test_users_sqlmodel.py -v
 uv run pytest apps/api/tests/test_users_prisma.py -v
 ```
 
@@ -245,6 +269,15 @@ uv run pytest apps/api/tests/test_users_prisma.py -v
 
 ### SQLAlchemy Endpoints
 Base path: `/api/v1/users`
+
+- `POST /` - Create new user (returns full user details)
+- `GET /{user_id}` - Get user by ID (returns full user details)
+- `GET /` - List users with pagination (returns minimal fields: id, username, created_at)
+- `PATCH /{user_id}` - Update user (returns full user details)
+- `DELETE /{user_id}` - Delete user
+
+### SQLModel Endpoints
+Base path: `/api/v1/sqlmodel/users`
 
 - `POST /` - Create new user (returns full user details)
 - `GET /{user_id}` - Get user by ID (returns full user details)
@@ -292,10 +325,26 @@ The API uses different Pydantic schemas for list and detail endpoints:
   ```python
   select(User.id, User.username, User.created_at)
   ```
-- **Prisma**: Fetches full records from database, filters fields at Python level
-  - Prisma Python Client (v0.11.0) does not support dynamic `select` parameter
-  - TypeScript/JavaScript Prisma supports `select: { id: true, username: true }`
-  - Python implementation uses full record retrieval with post-processing
+- **SQLModel**: Uses field-level SELECT (inherits SQLAlchemy capabilities)
+  ```python
+  select(User.id, User.username, User.created_at)
+  ```
+- **Prisma**: Uses Partial Types for field-level SELECT at database level
+  ```python
+  # Define partial type in prisma/partial_types.py (executed during prisma generate)
+  UserMinimal = User.create_partial(
+      "UserMinimal",
+      include={"id", "username", "created_at"},
+  )
+
+  # Use in queries (imports from prisma.partials)
+  from prisma.partials import UserMinimal
+  users = await UserMinimal.prisma(prisma).find_many()
+  ```
+  - ✅ **Field-level SELECT supported** via Partial Types (generation-time feature)
+  - ❌ Dynamic `select` parameter NOT supported (TypeScript/JavaScript feature only)
+  - Partial types defined in `prisma/partial_types.py` and generated during `prisma generate`
+  - More verbose than SQLAlchemy/SQLModel but achieves same database-level optimization
 
 ### Running the API
 ```bash
@@ -333,13 +382,193 @@ Documentation covers:
 - ✅ Debug configurations (`.vscode.example/launch.json`)
 - ✅ Tool-specific configurations (ruff, pyright, pytest)
 - ✅ Environment configuration (`.env.example`)
-- ⏳ SQLAlchemy vs Prisma comparison (In Progress)
+- ✅ SQLAlchemy vs SQLModel vs Prisma comparison
 - ⏳ Performance benchmarks (Planned)
+
+## 🔄 ORM Comparison: SQLAlchemy vs SQLModel vs Prisma
+
+### Overview
+
+This project implements the same User CRUD API using three different ORMs to compare their capabilities, limitations, and developer experience.
+
+| Feature | SQLAlchemy 2.0 | SQLModel | Prisma Python |
+|---------|----------------|----------|---------------|
+| **Type Safety** | ✅ Full (via Mapped) | ✅ Full (via Pydantic) | ✅ Full (generated) |
+| **Async Support** | ✅ Native | ✅ Native (inherits) | ✅ Native |
+| **Field-level SELECT** | ✅ Supported | ✅ Supported | ✅ **Via Partial Types** |
+| **Pydantic Integration** | ⚠️ Manual schemas | ✅ Built-in | ⚠️ Manual schemas |
+| **Auto-generated Models** | ❌ Manual | ❌ Manual | ✅ From schema |
+| **Migration System** | ⚠️ Alembic (separate) | ⚠️ Alembic (separate) | ✅ Built-in |
+| **DateTime Storage** | ✅ String format | ✅ String format | ⚠️ **Mixed (configurable)** |
+| **Shared Table Compatibility** | ✅ Compatible | ✅ Compatible | ⚠️ **Depends on config** |
+| **Maturity** | 🟢 Very Mature | 🟡 Growing | 🟡 Python client is new |
+| **Community** | 🟢 Large | 🟡 Medium | 🟢 Large (TS/JS) |
+
+### SQLAlchemy 2.0
+
+**Best for**: Production applications requiring maximum control and flexibility
+
+✅ **Strengths**:
+- Battle-tested and mature (15+ years)
+- Extremely flexible and powerful
+- Full control over queries and relationships
+- Supports field-level SELECT for query optimization
+- Large ecosystem and community
+- Comprehensive documentation
+- Native async support in 2.0+
+
+⚠️ **Considerations**:
+- Requires separate Pydantic schemas for FastAPI
+- More boilerplate compared to SQLModel
+- Steeper learning curve
+- Migration requires Alembic (separate tool)
+
+**Code Example**:
+```python
+# Model definition (packages/sqlalchemy/src/my_sqlalchemy/models/user.py)
+class User(Base):
+    __tablename__ = "user"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True)
+    # ... more fields
+
+# Optimized query (apps/api/src/routers/users.py)
+result = await db.execute(
+    select(User.id, User.username, User.created_at)  # Field-level SELECT
+    .offset(skip).limit(limit)
+)
+```
+
+### SQLModel
+
+**Best for**: FastAPI applications prioritizing developer experience and rapid development
+
+✅ **Strengths**:
+- Single model definition for ORM + validation
+- Automatic Pydantic model generation
+- Inherits ALL SQLAlchemy capabilities (including field-level SELECT)
+- Seamless FastAPI integration
+- Less boilerplate code
+- Type-safe with excellent IDE support
+- Automatic table naming
+
+⚠️ **Considerations**:
+- Newer and less mature than SQLAlchemy
+- Smaller ecosystem
+- Explicit `__tablename__` causes Pylance type errors (use automatic naming)
+- Still requires Alembic for migrations
+- Some advanced SQLAlchemy patterns require wrapper code
+
+**Code Example**:
+```python
+# Model definition (packages/sqlmodel/src/my_sqlmodel/models/user.py)
+class User(SQLModel, table=True):  # Both ORM and Pydantic!
+    id: int | None = Field(default=None, primary_key=True)
+    email: str = Field(unique=True, index=True, max_length=255)
+    # ... more fields
+    # Automatically generates Pydantic schema for FastAPI
+
+# Same optimized query as SQLAlchemy
+result = await db.execute(
+    select(User.id, User.username, User.created_at)  # Field-level SELECT works!
+    .offset(skip).limit(limit)
+)
+```
+
+### Prisma Python
+
+**Best for**: Projects prioritizing type safety and developer experience, willing to work within framework constraints
+
+✅ **Strengths**:
+- Auto-generated type-safe client from schema
+- Built-in migration system (`prisma migrate`)
+- Excellent TypeScript/JavaScript documentation
+- Modern API design
+- Strong type safety
+
+✅ **Field-level SELECT via Partial Types**:
+
+1. **Partial Types for Database-level Optimization** ✅ **Tested and Working**
+   ```python
+   # Step 1: Define partial type in prisma/partial_types.py (generation-time)
+   from prisma.models import User
+
+   UserMinimal = User.create_partial(
+       "UserMinimal",
+       include={"id", "username", "created_at"},
+   )
+
+   # Step 2: Generate client
+   # $ prisma generate
+
+   # Step 3: Use in queries (runtime)
+   from prisma.partials import UserMinimal
+
+   users = await UserMinimal.prisma(prisma).find_many()
+   # Returns only selected fields from database
+   ```
+
+   **Important Notes**:
+   - ✅ Field-level SELECT **IS supported** via Partial Types
+   - ❌ Dynamic `select` parameter NOT supported (TypeScript feature only)
+   - Partial types must be defined at generation time, not runtime
+   - More verbose than SQLAlchemy but achieves same optimization
+
+2. **DateTime Format Incompatibility**
+   - Prisma stores datetime as Unix timestamp (integer): `1763295924173`
+   - SQLAlchemy/SQLModel store as string: `"2025-11-16 12:25:24"`
+   - **Result**: Cannot share same database table with other ORMs
+
+3. **No Shared Table Support**
+   - Prisma Python Client's datetime handling is incompatible
+   - Attempting to mix Prisma with SQLAlchemy/SQLModel causes parsing errors
+   - Must use separate tables or Prisma-only approach
+
+**Why Prisma Cannot Be Used Alongside SQLAlchemy/SQLModel**:
+
+```python
+# Database table after mixed usage:
+sqlite> SELECT id, username, created_at FROM user;
+1|sqlalchemy_user|2025-11-16 12:25:24          # ✅ String format
+2|sqlmodel_user|2025-11-16 12:25:24.160013     # ✅ String format
+3|prisma_user|1763295924173                     # ❌ Unix timestamp!
+
+# Result: All ORMs fail to parse mixed datetime formats
+# SQLAlchemy/SQLModel: TypeError: fromisoformat: argument must be str
+# Prisma: DataError: Conversion failed: input contains invalid characters
+```
+
+⚠️ **Additional Considerations**:
+- Python client is less mature than TypeScript/JavaScript version
+- Some Prisma features not available in Python (e.g., dynamic `select` parameter)
+- Limited community resources for Python-specific issues
+- Partial types require generation-time definition (less flexible than runtime queries)
+
+### Recommendation
+
+**For this project**: Use **SQLModel** for new FastAPI applications
+- Combines best of SQLAlchemy (power) and Pydantic (validation)
+- Less boilerplate than pure SQLAlchemy
+- Full query optimization support (field-level SELECT)
+- Compatible with SQLAlchemy for shared database usage
+- Excellent FastAPI integration
+
+**For production systems**: Use **SQLAlchemy 2.0**
+- Maximum control and flexibility
+- Battle-tested reliability
+- Largest ecosystem and community support
+- Full compatibility with other SQLAlchemy-based tools
+
+**Consider Prisma Python carefully** for:
+- Projects requiring dynamic query optimization (only static partial types supported)
+- Projects needing to share tables with other ORMs (datetime compatibility issues)
+- Applications where datetime precision matters
+- Note: Python client has different feature set than TypeScript version
 
 ## 🔍 Key Learnings
 
 ### Monorepo Package Structure
-Both SQLAlchemy and Prisma packages follow consistent `src` layout:
+All ORM packages (SQLAlchemy, SQLModel, Prisma) follow consistent `src` layout:
 ```
 packages/{package-name}/
 ├── src/
@@ -349,39 +578,53 @@ packages/{package-name}/
 └── pyproject.toml            # packages = ["src"]
 ```
 
-### Prisma Python Client Limitations
-**Important**: Prisma Python Client (v0.11.0) has different capabilities than TypeScript/JavaScript version:
+### SQLModel Benefits
+**SQLModel** combines the best of SQLAlchemy and Pydantic:
 
-❌ **Not Supported**:
-- Dynamic `select` parameter for field selection
-  ```python
-  # This does NOT work in Python (works in TypeScript)
-  await prisma.user.find_many(
-      select={"id": True, "username": True}
-  )
-  ```
+✅ **Advantages**:
+- Single model definition for both ORM and validation
+- Automatic Pydantic model generation for FastAPI
+- Inherits all SQLAlchemy capabilities (field-level SELECT, relationships, etc.)
+- Type-safe with full IDE autocomplete support
+- Automatic table naming (lowercase class name)
+- Seamless FastAPI integration
 
-✅ **Current Workaround**:
-- Fetch full records, filter at Python level
-  ```python
-  users = await prisma.user.find_many()
-  return [{"id": u.id, "username": u.username} for u in users]
-  ```
+⚠️ **Considerations**:
+- Explicit `__tablename__` causes Pylance type errors (use automatic naming instead)
+- Less mature ecosystem than SQLAlchemy
+- Some SQLAlchemy patterns require wrapper code
 
-✅ **Alternative** (Complex):
-- Use Partial Types (requires pre-defined classes)
-- More complex to maintain and not recommended for simple use cases
+### Detailed Prisma Python Client Analysis
 
-**SQLAlchemy Advantage**: Supports field-level SELECT for true query optimization
-```python
-# SQLAlchemy can select specific columns
-select(User.id, User.username, User.created_at)
-```
+For a comprehensive comparison of Prisma with SQLAlchemy and SQLModel, see the **ORM Comparison** section above.
 
-### Database Path Management
-- Single `DB_PATH` environment variable for both ORMs
-- Absolute path calculation from file location prevents working directory issues
-- Shared database file ensures consistency across SQLAlchemy and Prisma endpoints
+**Summary of Key Features**:
+1. ✅ Field-level SELECT supported via Partial Types (generation-time definition)
+2. ❌ Dynamic `select` parameter NOT supported (TypeScript-only feature)
+3. ⚠️ DateTime stored as Unix timestamp instead of string format (compatibility issue)
+4. ⚠️ Cannot easily share database tables with SQLAlchemy/SQLModel due to datetime format
+5. ⚠️ Python client has different feature set than TypeScript/JavaScript version
+
+See detailed analysis in the [ORM Comparison section](#-orm-comparison-sqlalchemy-vs-sqlmodel-vs-prisma).
+
+### Database Sharing and Compatibility
+
+**SQLAlchemy + SQLModel**: ✅ **Fully Compatible**
+- Both use the same `user` table seamlessly
+- Datetime stored as string format (compatible)
+- Can read and write each other's data without issues
+- Shared database file at path specified by `DB_PATH` environment variable
+
+**Prisma**: ❌ **Not Compatible with SQLAlchemy/SQLModel**
+- Stores datetime as Unix timestamp (integer) instead of string
+- Cannot share the same table - causes parsing errors in all ORMs
+- Must use separate tables or Prisma-only approach
+- See [ORM Comparison](#-orm-comparison-sqlalchemy-vs-sqlmodel-vs-prisma) for details
+
+**Current Setup**:
+- `DB_PATH` environment variable points to single SQLite database
+- SQLAlchemy and SQLModel share the `user` table successfully
+- Prisma endpoints exist but should not be used with shared tables
 
 ## 🤝 Contributing
 
@@ -401,6 +644,7 @@ MIT License
 ### Frameworks
 - [FastAPI Documentation](https://fastapi.tiangolo.com/) - Modern Python web framework
 - [SQLAlchemy Documentation](https://www.sqlalchemy.org/) - Python SQL toolkit and ORM
+- [SQLModel Documentation](https://sqlmodel.tiangolo.com/) - SQL databases in Python with simplicity
 - [Prisma Documentation](https://www.prisma.io/docs) - Next-generation ORM
 - [Pydantic Documentation](https://docs.pydantic.dev/) - Data validation library
 
