@@ -342,18 +342,29 @@ The API uses different Pydantic schemas for list and detail endpoints:
   ```
 - **Prisma**: Uses Partial Types for field-level SELECT at database level
   ```python
-  # Define partial type in prisma/partial_types.py (executed during prisma generate)
+  # Step 1: Configure generator in schema.prisma
+  generator db {
+    provider              = "prisma-client-py"
+    interface             = "asyncio"
+    partial_type_generator = "packages/prisma/prisma/partial_types.py"
+  }
+
+  # Step 2: Define partial type in prisma/partial_types.py (executed during prisma generate)
   UserMinimal = User.create_partial(
       "UserMinimal",
       include={"id", "username", "created_at"},
   )
 
-  # Use in queries (imports from prisma.partials)
+  # Step 3: Generate client to create partials
+  # $ uv run prisma generate --schema=packages/prisma/schema.prisma
+
+  # Step 4: Use in queries (imports from prisma.partials)
   from prisma.partials import UserMinimal
   users = await UserMinimal.prisma(prisma).find_many()
   ```
   - ✅ **Field-level SELECT supported** via Partial Types (generation-time feature)
   - ❌ Dynamic `select` parameter NOT supported (TypeScript/JavaScript feature only)
+  - Requires `partial_type_generator` configuration in schema.prisma
   - Partial types defined in `prisma/partial_types.py` and generated during `prisma generate`
   - More verbose than SQLAlchemy/SQLModel but achieves same database-level optimization
 
@@ -506,7 +517,14 @@ result = await db.execute(
 
 1. **Partial Types for Database-level Optimization** ✅ **Tested and Working**
    ```python
-   # Step 1: Define partial type in prisma/partial_types.py (generation-time)
+   # Step 1: Configure generator in schema.prisma
+   generator db {
+     provider              = "prisma-client-py"
+     interface             = "asyncio"
+     partial_type_generator = "packages/prisma/prisma/partial_types.py"
+   }
+
+   # Step 2: Define partial type in prisma/partial_types.py (generation-time)
    from prisma.models import User
 
    UserMinimal = User.create_partial(
@@ -514,10 +532,10 @@ result = await db.execute(
        include={"id", "username", "created_at"},
    )
 
-   # Step 2: Generate client
-   # $ prisma generate
+   # Step 3: Generate client to create partials
+   # $ uv run prisma generate --schema=packages/prisma/schema.prisma
 
-   # Step 3: Use in queries (runtime)
+   # Step 4: Use in queries (runtime)
    from prisma.partials import UserMinimal
 
    users = await UserMinimal.prisma(prisma).find_many()
@@ -527,6 +545,7 @@ result = await db.execute(
    **Important Notes**:
    - ✅ Field-level SELECT **IS supported** via Partial Types
    - ❌ Dynamic `select` parameter NOT supported (TypeScript feature only)
+   - Requires `partial_type_generator` configuration in schema.prisma
    - Partial types must be defined at generation time, not runtime
    - More verbose than SQLAlchemy but achieves same optimization
 
