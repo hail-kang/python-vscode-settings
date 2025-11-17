@@ -78,11 +78,7 @@ async def get_user(user_id: int, prisma: Prisma = Depends(get_prisma_client)) ->
 async def list_users(
     skip: int = 0, limit: int = 100, prisma: Prisma = Depends(get_prisma_client)
 ) -> list[UserListItem]:
-    """List all users with pagination using Prisma with field-level SELECT.
-
-    Uses Prisma partial types to select only required fields (id, username, created_at)
-    for optimized database queries.
-    """
+    """List all users with pagination using Prisma with field-level SELECT."""
     # Use partial type to select only needed fields at DB level
     users = await UserMinimal.prisma(prisma).find_many(
         skip=skip,
