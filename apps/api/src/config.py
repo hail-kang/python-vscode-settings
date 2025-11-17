@@ -25,18 +25,15 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
-    # Database - DB_PATH for SQLAlchemy/SQLModel (shared)
+    # Database - DB_PATH for all ORMs (SQLAlchemy/SQLModel/Prisma)
     db_path: str = ""
-
-    # Prisma uses separate database (datetime incompatibility)
-    prisma_db_path: str = ""
 
     # API
     api_v1_prefix: str = "/api/v1"
 
     @property
     def database_url(self) -> str:
-        """SQLAlchemy/SQLModel database URL (shared)."""
+        """SQLAlchemy/SQLModel database URL."""
         if not self.db_path:
             msg = (
                 "DB_PATH environment variable is required but not set. "
@@ -47,14 +44,14 @@ class Settings(BaseSettings):
 
     @property
     def prisma_database_url(self) -> str:
-        """Prisma database URL (separate database)."""
-        if not self.prisma_db_path:
+        """Prisma database URL (same database as SQLAlchemy/SQLModel)."""
+        if not self.db_path:
             msg = (
-                "PRISMA_DB_PATH environment variable is required but not set. "
-                "Please set PRISMA_DB_PATH in your .env file or environment."
+                "DB_PATH environment variable is required but not set. "
+                "Please set DB_PATH in your .env file or environment."
             )
             raise ValueError(msg)
-        return f"file:{self.prisma_db_path}"
+        return f"file:{self.db_path}"
 
 
 settings = Settings()
