@@ -1,6 +1,9 @@
 """Partial type definitions for Prisma models.
 
-This file is executed during `prisma generate` to create partial types.
+According to Prisma Python docs, partials should be created using:
+Model.create_partial(name, include/exclude, ...)
+
+This module exports pre-defined partial types for convenience.
 """
 
 from prisma.models import User
@@ -10,3 +13,5 @@ UserMinimal = User.create_partial(
     "UserMinimal",
     include={"id", "username", "created_at"},
 )
+
+__all__ = ["UserMinimal"]
