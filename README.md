@@ -236,6 +236,14 @@ Workspace-aware type checking:
    - Implementation examples and best practices
    - Partial types and query optimization documentation
 
+8. **Phase 8**: DateTime compatibility solution ✅
+   - Custom `UnixTimestampDateTime` TypeDecorator for SQLAlchemy
+   - Custom `UnixTimestampDateTime` TypeDecorator for SQLModel
+   - Unified database format using Unix timestamp (integer)
+   - All three ORMs now share the same database table
+   - Backward compatible with ISO string format
+   - Full type safety with ruff and pyright validation
+
 ## 🧪 Testing Strategy
 
 ### Current Test Coverage
@@ -407,8 +415,8 @@ This project implements the same User CRUD API using three different ORMs to com
 | **Pydantic Integration** | ⚠️ Manual schemas | ✅ Built-in | ⚠️ Manual schemas |
 | **Auto-generated Models** | ❌ Manual | ❌ Manual | ✅ From schema |
 | **Migration System** | ⚠️ Alembic (separate) | ⚠️ Alembic (separate) | ✅ Built-in |
-| **DateTime Storage** | ✅ String format | ✅ String format | ⚠️ **Mixed (configurable)** |
-| **Shared Table Compatibility** | ✅ Compatible | ✅ Compatible | ⚠️ **Depends on config** |
+| **DateTime Storage** | ✅ Unix timestamp | ✅ Unix timestamp | ✅ Unix timestamp |
+| **Shared Table Compatibility** | ✅ Compatible | ✅ Compatible | ✅ **Compatible (with TypeDecorator)** |
 | **Maturity** | 🟢 Very Mature | 🟡 Growing | 🟡 Python client is new |
 | **Community** | 🟢 Large | 🟡 Medium | 🟢 Large (TS/JS) |
 
@@ -522,35 +530,37 @@ result = await db.execute(
    - Partial types must be defined at generation time, not runtime
    - More verbose than SQLAlchemy but achieves same optimization
 
-2. **DateTime Format Incompatibility**
-   - Prisma stores datetime as Unix timestamp (integer): `1763295924173`
-   - SQLAlchemy/SQLModel store as string: `"2025-11-16 12:25:24"`
-   - **Result**: Cannot share same database table with other ORMs
+2. **Unified DateTime Format with Custom TypeDecorator** ✅ **Solved**
+   - Prisma stores datetime as Unix timestamp in milliseconds (integer): `1763370290000`
+   - SQLAlchemy/SQLModel adapted to use Unix timestamp format
+   - **Solution**: Custom `UnixTimestampDateTime` TypeDecorator
 
-3. **No Shared Table Support**
-   - Prisma Python Client's datetime handling is incompatible
-   - Attempting to mix Prisma with SQLAlchemy/SQLModel causes parsing errors
-   - Must use separate tables or Prisma-only approach
+   ```python
+   class UnixTimestampDateTime(TypeDecorator):
+       """Handles both Unix timestamps (from Prisma) and ISO strings."""
+       impl = DateTime  # or Integer for SQLite
 
-**Why Prisma Cannot Be Used Alongside SQLAlchemy/SQLModel**:
+       def process_result_value(self, value, dialect):
+           if isinstance(value, int):
+               # Convert Unix timestamp (ms) to datetime
+               return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+           # Also handles ISO string format for backward compatibility
+           return datetime.fromisoformat(value)
+   ```
 
-```python
-# Database table after mixed usage:
-sqlite> SELECT id, username, created_at FROM user;
-1|sqlalchemy_user|2025-11-16 12:25:24          # ✅ String format
-2|sqlmodel_user|2025-11-16 12:25:24.160013     # ✅ String format
-3|prisma_user|1763295924173                     # ❌ Unix timestamp!
+3. **Full Three-Way Compatibility** ✅ **Achieved**
+   - All three ORMs now share the same `user` table
+   - Unified database configuration via single `DB_PATH`
+   - DateTime format standardized to Unix timestamp (integer)
+   - TypeDecorator handles conversion transparently
+   - Backward compatible with ISO string format
 
-# Result: All ORMs fail to parse mixed datetime formats
-# SQLAlchemy/SQLModel: TypeError: fromisoformat: argument must be str
-# Prisma: DataError: Conversion failed: input contains invalid characters
-```
-
-⚠️ **Additional Considerations**:
+⚠️ **Considerations**:
 - Python client is less mature than TypeScript/JavaScript version
 - Some Prisma features not available in Python (e.g., dynamic `select` parameter)
 - Limited community resources for Python-specific issues
 - Partial types require generation-time definition (less flexible than runtime queries)
+- Requires custom TypeDecorator in SQLAlchemy/SQLModel for datetime compatibility
 
 ### Recommendation
 
@@ -567,11 +577,12 @@ sqlite> SELECT id, username, created_at FROM user;
 - Largest ecosystem and community support
 - Full compatibility with other SQLAlchemy-based tools
 
-**Consider Prisma Python carefully** for:
-- Projects requiring dynamic query optimization (only static partial types supported)
-- Projects needing to share tables with other ORMs (datetime compatibility issues)
-- Applications where datetime precision matters
-- Note: Python client has different feature set than TypeScript version
+**Prisma Python is now viable** for:
+- ✅ Multi-ORM projects (datetime compatibility solved with TypeDecorator)
+- ✅ Shared database tables with SQLAlchemy/SQLModel
+- Type-safe schema-first development
+- Built-in migration system
+- Note: Requires custom TypeDecorator for SQLAlchemy/SQLModel integration
 
 ## 🔍 Key Learnings
 
@@ -602,37 +613,83 @@ packages/{package-name}/
 - Less mature ecosystem than SQLAlchemy
 - Some SQLAlchemy patterns require wrapper code
 
-### Detailed Prisma Python Client Analysis
+### DateTime Compatibility Solution
 
-For a comprehensive comparison of Prisma with SQLAlchemy and SQLModel, see the **ORM Comparison** section above.
+**Problem**: Prisma stores datetime as Unix timestamp (integer), while SQLAlchemy/SQLModel expect ISO string format.
 
-**Summary of Key Features**:
+**Solution**: Custom `UnixTimestampDateTime` TypeDecorator for SQLAlchemy and SQLModel:
+
+```python
+class UnixTimestampDateTime(TypeDecorator):
+    """DateTime type that handles both Unix timestamps (from Prisma) and ISO strings."""
+
+    impl = DateTime
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        # Use Integer for SQLite to prevent automatic datetime string processing
+        if dialect.name == "sqlite":
+            return dialect.type_descriptor(Integer())
+        return dialect.type_descriptor(DateTime())
+
+    def process_result_value(self, value, dialect):
+        """Convert database value to Python datetime."""
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, int):
+            # Convert Unix timestamp in milliseconds to datetime
+            return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
+        if isinstance(value, str):
+            # Handle ISO format for backward compatibility
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return value
+```
+
+**Result**: All three ORMs (SQLAlchemy, SQLModel, Prisma) can now read and write to the same database table.
+
+**Key Features**:
 1. ✅ Field-level SELECT supported via Partial Types (generation-time definition)
-2. ❌ Dynamic `select` parameter NOT supported (TypeScript-only feature)
-3. ⚠️ DateTime stored as Unix timestamp instead of string format (compatibility issue)
-4. ⚠️ Cannot easily share database tables with SQLAlchemy/SQLModel due to datetime format
+2. ✅ DateTime compatibility solved with custom TypeDecorator
+3. ✅ All three ORMs share the same database table
+4. ✅ Backward compatible with ISO string format
 5. ⚠️ Python client has different feature set than TypeScript/JavaScript version
 
 See detailed analysis in the [ORM Comparison section](#-orm-comparison-sqlalchemy-vs-sqlmodel-vs-prisma).
 
 ### Database Sharing and Compatibility
 
-**SQLAlchemy + SQLModel**: ✅ **Fully Compatible**
-- Both use the same `user` table seamlessly
-- Datetime stored as string format (compatible)
+**All Three ORMs**: ✅ **Fully Compatible**
+- All use the same `user` table seamlessly
+- Datetime stored as Unix timestamp (integer) - Prisma native format
+- SQLAlchemy and SQLModel use custom `UnixTimestampDateTime` TypeDecorator
 - Can read and write each other's data without issues
 - Shared database file at path specified by `DB_PATH` environment variable
 
-**Prisma**: ❌ **Not Compatible with SQLAlchemy/SQLModel**
-- Stores datetime as Unix timestamp (integer) instead of string
-- Cannot share the same table - causes parsing errors in all ORMs
-- Must use separate tables or Prisma-only approach
-- See [ORM Comparison](#-orm-comparison-sqlalchemy-vs-sqlmodel-vs-prisma) for details
+**Implementation**:
+```python
+# SQLAlchemy/SQLModel models use custom TypeDecorator
+created_at: Mapped[datetime] = mapped_column(
+    UnixTimestampDateTime,  # Handles Unix timestamp ↔ datetime conversion
+    default=lambda: datetime.now(timezone.utc),
+    server_default=func.current_timestamp(),
+    nullable=False,
+)
+```
 
-**Current Setup**:
-- `DB_PATH` environment variable points to single SQLite database
-- SQLAlchemy and SQLModel share the `user` table successfully
-- Prisma endpoints exist but should not be used with shared tables
+**Database Storage**:
+```sql
+-- All datetime fields stored as Unix timestamp (integer)
+sqlite> SELECT id, username, created_at FROM user;
+1|test_user|1763370290000  # Integer (Unix timestamp in milliseconds)
+```
+
+**Benefits**:
+- ✅ Single unified database for all three ORMs
+- ✅ No data duplication or synchronization needed
+- ✅ Type-safe datetime handling across all ORMs
+- ✅ Backward compatible with ISO string format
 
 ## 🤝 Contributing
 
