@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Column, Integer, TypeDecorator, func
+from sqlalchemy import Column, Integer, TypeDecorator
 from sqlalchemy.engine import Dialect
 from sqlmodel import Field, SQLModel
 
@@ -19,9 +19,14 @@ class UnixTimestampDateTime(TypeDecorator):
     impl = Integer  # SQLite stores as integer
     cache_ok = True
 
-    def process_bind_param(self, value: datetime | None, dialect: Dialect) -> datetime | None:  # noqa: ARG002
-        """Convert Python datetime to database value (pass through for SQLite)."""
-        return value
+    def process_bind_param(self, value: datetime | None, dialect: Dialect) -> int | None:
+        """Convert Python datetime to database value (Unix timestamp for SQLite)."""
+        if value is None:
+            return None
+        # Convert datetime to Unix timestamp in milliseconds for SQLite
+        if dialect.name == "sqlite":
+            return int(value.timestamp() * 1000)
+        return value  # type: ignore[return-value]
 
     def process_result_value(self, value: Any, dialect: Dialect) -> datetime | None:  # noqa: ARG002, ANN401
         """Convert database value to Python datetime.
@@ -72,7 +77,6 @@ class User(SQLModel, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
             UnixTimestampDateTime,
-            server_default=func.current_timestamp(),
             nullable=False,
         ),
     )
@@ -80,8 +84,7 @@ class User(SQLModel, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
             UnixTimestampDateTime,
-            server_default=func.current_timestamp(),
-            onupdate=func.current_timestamp(),
+            onupdate=lambda: datetime.now(timezone.utc),
             nullable=False,
         ),
     )

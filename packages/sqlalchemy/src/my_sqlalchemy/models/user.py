@@ -29,9 +29,14 @@ class UnixTimestampDateTime(TypeDecorator):
             return dialect.type_descriptor(Integer())
         return dialect.type_descriptor(DateTime())
 
-    def process_bind_param(self, value: datetime | None, dialect: Dialect) -> datetime | None:  # noqa: ARG002
-        """Convert Python datetime to database value (pass through for SQLite)."""
-        return value
+    def process_bind_param(self, value: datetime | None, dialect: Dialect) -> int | None:
+        """Convert Python datetime to database value (Unix timestamp for SQLite)."""
+        if value is None:
+            return None
+        # Convert datetime to Unix timestamp in milliseconds for SQLite
+        if dialect.name == "sqlite":
+            return int(value.timestamp() * 1000)
+        return value  # type: ignore[return-value]
 
     def process_result_value(self, value: Any, dialect: Dialect) -> datetime | None:  # noqa: ARG002, ANN401
         """Convert database value to Python datetime.
@@ -77,14 +82,12 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         UnixTimestampDateTime,
         default=lambda: datetime.now(timezone.utc),
-        server_default=func.current_timestamp(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         UnixTimestampDateTime,
         default=lambda: datetime.now(timezone.utc),
-        server_default=func.current_timestamp(),
-        onupdate=func.current_timestamp(),
+        onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
